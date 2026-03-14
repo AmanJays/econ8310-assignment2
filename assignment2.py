@@ -1,42 +1,42 @@
 import pandas as pd
-import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
-# URLs for training and test data
-train_url = "https://github.com/dustywhite7/Econ8310/raw/master/AssignmentData/assignment3.csv"
-test_url = "https://github.com/dustywhite7/Econ8310/raw/master/AssignmentData/assignment3test.csv"
+# Load the data
+train = pd.read_csv("assignment2train.csv")
+test = pd.read_csv("assignment2test.csv")
 
-# Load data
-train_data = pd.read_csv(train_url)
-test_data = pd.read_csv(test_url)
+# Convert DateTime to datetime type
+train['DateTime'] = pd.to_datetime(train['DateTime'])
+test['DateTime'] = pd.to_datetime(test['DateTime'])
 
-# Optional: create simple time-based features if timestamp exists
-for df in [train_data, test_data]:
-    if 'timestamp' in df.columns:
-        df['hour'] = pd.to_datetime(df['timestamp']).dt.hour
-        df['day_of_week'] = pd.to_datetime(df['timestamp']).dt.dayofweek
-        df.drop(columns=['timestamp'], inplace=True)
+# Feature engineering: extract hour and day of week
+train['hour'] = train['DateTime'].dt.hour
+train['day_of_week'] = train['DateTime'].dt.dayofweek
 
-# Drop irrelevant columns if they exist
-train_data = train_data.drop(columns=['id'], errors='ignore')
-test_features = test_data.drop(columns=['id'], errors='ignore')
+test['hour'] = test['DateTime'].dt.hour
+test['day_of_week'] = test['DateTime'].dt.dayofweek
 
-# Separate target
-X_train = train_data.drop(columns=['meal'], errors='ignore')
-y_train = train_data['meal']
+# Drop columns not used in training
+drop_cols = ['id', 'DateTime', 'meal']  # 'meal' is the target
+X_train = train.drop(columns=drop_cols)
+y_train = train['meal']
 
-# Convert categorical columns to dummies
-X_train = pd.get_dummies(X_train)
-test_features = pd.get_dummies(test_features)
-test_features = test_features.reindex(columns=X_train.columns, fill_value=0)
+X_test = test.drop(columns=['id', 'DateTime'])  # we don’t have 'meal' here
 
-# Fit RandomForest
-model = RandomForestClassifier(n_estimators=100, max_depth=6, random_state=42)
+# Align columns in case train and test have mismatch
+X_test = X_test[X_train.columns]
+
+# Train Random Forest
+model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
 modelFit = model.fit(X_train, y_train)
 
-# Predict on test set (Python ints)
-pred = [int(x) for x in modelFit.predict(test_features)]
+# Make predictions
+pred = modelFit.predict(X_test)
 
-# Output for sanity check
-print("Number of predictions:", len(pred))
-print("Sample predictions:", pred[:20])
+# Ensure predictions are integers
+pred = pred.astype(int)
+
+# Save predictions
+submission = pd.DataFrame({'id': test['id'], 'meal': pred})
+submission.to_csv("assignment2_predictions.csv", index=False)
+print("Predictions saved to assignment2_predictions.csv")
