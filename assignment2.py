@@ -1,38 +1,46 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
-# Load training and test data from URLs
+# Load data
 train_url = "https://github.com/dustywhite7/Econ8310/raw/master/AssignmentData/assignment3.csv"
-test_url  = "https://github.com/dustywhite7/Econ8310/raw/master/AssignmentData/assignment3test.csv"
+test_url = "https://github.com/dustywhite7/Econ8310/raw/master/AssignmentData/assignment3test.csv"
 
 train = pd.read_csv(train_url)
 test = pd.read_csv(test_url)
 
-# Convert DateTime to datetime
-train['DateTime'] = pd.to_datetime(train['DateTime'])
-test['DateTime'] = pd.to_datetime(test['DateTime'])
+def prepare_features(df):
+    df["DateTime"] = pd.to_datetime(df["DateTime"])
+    df["hour"] = df["DateTime"].dt.hour
+    df["day"] = df["DateTime"].dt.dayofweek
 
-# Feature engineering: extract hour and day of week
-train['hour'] = train['DateTime'].dt.hour
-train['day_of_week'] = train['DateTime'].dt.dayofweek
-test['hour'] = test['DateTime'].dt.hour
-test['day_of_week'] = test['DateTime'].dt.dayofweek
+    df["is_lunch"] = df["hour"].between(11, 14).astype(int)
+    df["is_dinner"] = df["hour"].between(17, 20).astype(int)
 
-# Prepare training and target
-drop_cols = ['id', 'DateTime', 'meal']
-X_train = train.drop(columns=drop_cols)
-y_train = train['meal']
+    cols_to_remove = ["id", "DateTime", "meal"]
+    existing = [c for c in cols_to_remove if c in df.columns]
 
-# Prepare test data
-X_test = test.drop(columns=['id', 'DateTime'])
-X_test = X_test[X_train.columns]  # align columns exactly
+    return df.drop(columns=existing)
 
-# Define model
-model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
+# Split
+y_train = train["meal"]
+X_train = prepare_features(train)
+X_test = prepare_features(test)
 
-# Fit model
+# Extra safety
+if "meal" in X_test.columns:
+    X_test = X_test.drop(columns=["meal"])
+
+# Align columns
+X_test = X_test[X_train.columns]
+
+# Model
+model = RandomForestClassifier(
+    n_estimators=120,
+    max_depth=12,
+    random_state=42,
+    class_weight="balanced"
+)
+
 modelFit = model.fit(X_train, y_train)
 
-# Make predictions (integers 0 or 1)
-pred = modelFit.predict(X_test).astype(int)
-print(pred)
+pred = modelFit.predict(X_test).astype(int).tolist()
