@@ -1,15 +1,18 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
-# Load data
-train = pd.read_csv("assignment2train.csv")
-test = pd.read_csv("assignment2test.csv")
+# Load training and test data from URLs
+train_url = "https://github.com/dustywhite7/Econ8310/raw/master/AssignmentData/assignment3.csv"
+test_url  = "https://github.com/dustywhite7/Econ8310/raw/master/AssignmentData/assignment3test.csv"
+
+train = pd.read_csv(train_url)
+test = pd.read_csv(test_url)
 
 # Convert DateTime to datetime
 train['DateTime'] = pd.to_datetime(train['DateTime'])
 test['DateTime'] = pd.to_datetime(test['DateTime'])
 
-# Feature engineering
+# Feature engineering: extract hour and day of week
 train['hour'] = train['DateTime'].dt.hour
 train['day_of_week'] = train['DateTime'].dt.dayofweek
 test['hour'] = test['DateTime'].dt.hour
@@ -30,10 +33,6 @@ model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
 # Fit model
 modelFit = model.fit(X_train, y_train)
 
-# Make predictions
+# Make predictions (integers 0 or 1)
 pred = modelFit.predict(X_test).astype(int)
-
-# Save predictions if needed
-submission = pd.DataFrame({'id': test['id'], 'meal': pred})
-submission.to_csv("assignment2_predictions.csv", index=False)
-print("Predictions saved to assignment2_predictions.csv")
+print(pred)
