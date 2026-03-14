@@ -1,41 +1,74 @@
+# ---------------------------
+# 1️⃣ Imports
+# ---------------------------
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 
-# Load training data
-train = pd.read_csv("assignment2train.csv")
+# ---------------------------
+# 2️⃣ Load your data
+# ---------------------------
+data = pd.read_csv('assignment2train.csv') 
 
-# Convert DateTime to useful features
-train["DateTime"] = pd.to_datetime(train["DateTime"])
-train["hour"] = train["DateTime"].dt.hour
-train["dayofweek"] = train["DateTime"].dt.dayofweek
+# ---------------------------
+# 3️⃣ Separate features and target
+# ---------------------------
+target_col = 'Total'  
+X = data.drop(columns=[target_col], errors='ignore')
+y = data[target_col]
 
-# Drop columns not used for modeling
-train = train.drop(columns=["id", "DateTime"])
+# ---------------------------
+# 4️⃣ Drop high-cardinality IDs (if any)
+# ---------------------------
+high_card_cols = ['meal', 'id']  # columns that are unique per row
+X = X.drop(columns=[col for col in high_card_cols if col in X.columns], errors='ignore')
 
-# Features and target
-X = train.drop(columns=["meal"])
-y = train["meal"]
+# ---------------------------
+# 5️⃣ Convert categorical variables
+# ---------------------------
+X = pd.get_dummies(X)  # automatically converts all categorical columns
 
-# Create model
-model = RandomForestClassifier(n_estimators=200, random_state=42)
+# ---------------------------
+# 6️⃣ Train/test split
+# ---------------------------
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
 
-# Fit model
-modelFit = model.fit(X, y)
+# ---------------------------
+# 7️⃣ Initialize model (optimized)
+# ---------------------------
+model = RandomForestRegressor(
+    n_estimators=10,       # fewer trees = faster
+    max_depth=10,          # limit depth to prevent huge trees
+    max_features='sqrt',   # speed up and reduce overfitting
+    random_state=1,
+    n_jobs=1               # single core avoids freezing
+)
 
-# Load test data
-test = pd.read_csv("assignment2test.csv")
+# ---------------------------
+# 8️⃣ Fit model
+# ---------------------------
+modelFit = model.fit(X_train, y_train)
 
-# Apply same feature engineering
-test["DateTime"] = pd.to_datetime(test["DateTime"])
-test["hour"] = test["DateTime"].dt.hour
-test["dayofweek"] = test["DateTime"].dt.dayofweek
+# ---------------------------
+# 9️⃣ Predict
+# ---------------------------
+pred = modelFit.predict(X_test)
 
-test = test.drop(columns=["id", "DateTime"])
+# ---------------------------
+# 🔟 Evaluate
+# ---------------------------
+mse = mean_squared_error(y_test, pred)
+rmse = mse ** 0.5
+print(f"Test RMSE: {rmse:.2f}")
 
-# Make predictions
-pred = modelFit.predict(test)
+# ---------------------------
+# 11️⃣ Predict on new/test set
+# ---------------------------
+test_data = pd.read_csv('assignment2test.csv')  # <-- replace with your actual test file
+test_data = test_data.drop(columns=[col for col in high_card_cols if col in test_data.columns], errors='ignore')
+test_data = pd.get_dummies(test_data)
+test_data = test_data.reindex(columns=X_train.columns, fill_value=0)  # align columns
 
-# Convert predictions to list of integers
-pred = [int(x) for x in pred]
-
-
+pred_test = modelFit.predict(test_data)
+print(pred_test[:20])  # print first 20 predictions for sanity check
