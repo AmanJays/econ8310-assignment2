@@ -7,68 +7,50 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 
 # ---------------------------
-# 2️⃣ Load your data
+# 2️⃣ Load data
 # ---------------------------
-data = pd.read_csv('assignment2train.csv') 
+data = pd.read_csv('assignment2train.csv')
 
 # ---------------------------
-# 3️⃣ Separate features and target
+# 3️⃣ Features and target
 # ---------------------------
-target_col = 'Total'  
-X = data.drop(columns=[target_col], errors='ignore')
+target_col = 'Total'
+X = data.drop(columns=[target_col, 'id', 'meal'], errors='ignore')
 y = data[target_col]
 
 # ---------------------------
-# 4️⃣ Drop high-cardinality IDs (if any)
+# 4️⃣ Convert categorical features
 # ---------------------------
-high_card_cols = ['meal', 'id']  # columns that are unique per row
-X = X.drop(columns=[col for col in high_card_cols if col in X.columns], errors='ignore')
+X = pd.get_dummies(X)
 
 # ---------------------------
-# 5️⃣ Convert categorical variables
-# ---------------------------
-X = pd.get_dummies(X)  # automatically converts all categorical columns
-
-# ---------------------------
-# 6️⃣ Train/test split
+# 5️⃣ Train/test split
 # ---------------------------
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
 
 # ---------------------------
-# 7️⃣ Initialize model (optimized)
+# 6️⃣ Initialize and fit model
 # ---------------------------
-model = RandomForestRegressor(
-    n_estimators=10,       # fewer trees = faster
-    max_depth=10,          # limit depth to prevent huge trees
-    max_features='sqrt',   # speed up and reduce overfitting
-    random_state=1,
-    n_jobs=1               # single core avoids freezing
-)
-
-# ---------------------------
-# 8️⃣ Fit model
-# ---------------------------
+model = RandomForestRegressor(random_state=1)
 modelFit = model.fit(X_train, y_train)
 
 # ---------------------------
-# 9️⃣ Predict
+# 7️⃣ Predict on test
 # ---------------------------
 pred = modelFit.predict(X_test)
 
 # ---------------------------
-# 🔟 Evaluate
+# 8️⃣ Evaluate
 # ---------------------------
-mse = mean_squared_error(y_test, pred)
-rmse = mse ** 0.5
+rmse = mean_squared_error(y_test, pred, squared=False)
 print(f"Test RMSE: {rmse:.2f}")
 
 # ---------------------------
-# 11️⃣ Predict on new/test set
+# 9️⃣ Predict on new test set
 # ---------------------------
-test_data = pd.read_csv('assignment2test.csv')  # <-- replace with your actual test file
-test_data = test_data.drop(columns=[col for col in high_card_cols if col in test_data.columns], errors='ignore')
+test_data = pd.read_csv('assignment2test.csv')
+test_data = test_data.drop(columns=['id','meal'], errors='ignore')
 test_data = pd.get_dummies(test_data)
-test_data = test_data.reindex(columns=X_train.columns, fill_value=0)  # align columns
+test_data = test_data.reindex(columns=X_train.columns, fill_value=0)
 
 pred_test = modelFit.predict(test_data)
-print(pred_test[:20])  # print first 20 predictions for sanity check
