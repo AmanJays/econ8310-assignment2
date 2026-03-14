@@ -5,24 +5,23 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
-import numpy as np
 
 # ---------------------------
 # 2️⃣ Load your data
 # ---------------------------
-data = pd.read_csv('assignment2train.csv') 
+data = pd.read_csv('assignment2train.csv')
 
 # ---------------------------
 # 3️⃣ Separate features and target
 # ---------------------------
-target_col = 'Total'  
+target_col = 'Total'
 X = data.drop(columns=[target_col], errors='ignore')
 y = data[target_col]
 
 # ---------------------------
 # 4️⃣ Drop high-cardinality IDs
 # ---------------------------
-high_card_cols = ['meal', 'id']
+high_card_cols = ['meal', 'id']  # columns unique per row
 X = X.drop(columns=[col for col in high_card_cols if col in X.columns], errors='ignore')
 
 # ---------------------------
@@ -40,7 +39,8 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # ---------------------------
 model = RandomForestRegressor(
     n_estimators=10,
-    max_depth=5,
+    max_depth=10,
+    max_features='sqrt',
     random_state=1,
     n_jobs=1
 )
@@ -59,7 +59,7 @@ pred = modelFit.predict(X_test)
 # 🔟 Evaluate
 # ---------------------------
 mse = mean_squared_error(y_test, pred)
-rmse = np.sqrt(mse)
+rmse = mse ** 0.5
 print(f"Test RMSE: {rmse:.2f}")
 
 # ---------------------------
@@ -71,5 +71,5 @@ test_data = pd.get_dummies(test_data)
 test_data = test_data.reindex(columns=X_train.columns, fill_value=0)
 
 pred_test = modelFit.predict(test_data)
-pred_test = [float(x) for x in pred_test]  
-print(pred_test[:20])
+pred_test = [float(x) for x in pred_test]  # convert to plain floats for autograder
+print(pred_test[:20])  # first 20 predictions
